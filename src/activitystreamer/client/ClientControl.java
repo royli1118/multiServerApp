@@ -21,11 +21,8 @@ public class ClientControl extends Thread {
     private String serverId;
 
     private TextFrame textFrame;
-    private MainFrame mainFrame;
+    private LoginFrame loginFrame;
 
-    /*
-     * additional variables
-     */
     private boolean connectionClosed;
 
     private ClientControl() {
@@ -34,7 +31,10 @@ public class ClientControl extends Thread {
         start();
     }
 
-    // this is a singleton object
+    /**
+     * Have not changed from skeleton code
+     * @return clientControl
+     */
     public static synchronized ClientControl getInstance() {
         if (clientControl == null) {
             clientControl = new ClientControl();
@@ -43,7 +43,10 @@ public class ClientControl extends Thread {
         return clientControl;
     }
 
-    // called by the gui when the user clicks "send"
+    /**
+     * It is called by GUI SEND COMMAND to send any JSON message
+     * @param activityContent
+     */
     public void sendActivityObject(String activityContent) {
         log.info("Activity message sent: " + activityContent);
 
@@ -57,16 +60,19 @@ public class ClientControl extends Thread {
         connection.writeMsg(activityMessage);
     }
 
-    // called by the gui when the user clicks disconnect
+    /**
+     * The action for disconnect button
+     */
     public void disconnect() {
         /*
          * other things to do
          */
-        sendLogoutMsg();
+        sendLogout();
         closeConnection();
-        mainFrame.close();
+        loginFrame.close();
         textFrame.dispose();
     }
+
 
     public synchronized boolean process(String receivedJsonStr) {
         log.debug("Client received: " + receivedJsonStr);
@@ -126,35 +132,41 @@ public class ClientControl extends Thread {
         }
     }
 
-    // the client's run method, to receive messages
+    /**
+     * The Client's run method.
+     */
     @Override
     public void run() {
         log.debug("Client started");
 
         // Do something!!!
-        mainFrame = new MainFrame();
+        loginFrame = new LoginFrame();
     }
 
     /*
-     * additional methods
+     * Process Login Fail using JSON message.
      */
     private boolean processLoginFailedMsg(JsonObject receivedJson) {
         log.info("Login failed");
 
         String loginFaildInfo = receivedJson.get("info").getAsString();
-        mainFrame.showInfoBox(loginFaildInfo);
+        loginFrame.showInfoBox(loginFaildInfo);
         closeConnection();
 
         return true;
     }
 
+
+    /*
+     * Process Login Success using JSON message.
+     */
     private boolean processLoginSuccessMsg() {
         log.info("Login success received");
 
         // open the gui
         log.debug("opening the gui");
 
-        mainFrame.hide();
+        loginFrame.hide();
 
         if (textFrame == null) {
             textFrame = new TextFrame();
@@ -163,16 +175,25 @@ public class ClientControl extends Thread {
         return false;
     }
 
+
+    /*
+     * Process Register Success Message Using JSON
+     *
+     */
     private boolean processRegisterSuccessMsg(JsonObject receivedJsonObj) {
         log.info("Register success received");
 
         String info = receivedJsonObj.get("info").getAsString();
-        mainFrame.showInfoBox(info);
+        loginFrame.showInfoBox(info);
         closeConnection();
 
         return true;
     }
 
+    /*
+     * Process UnknownMessage, if the Message is Unknown, and disconnect
+     *
+     */
     private boolean processUnknownMsg(JsonObject receivedJsonObj) {
         log.info("Unknown message received");
 
@@ -181,6 +202,10 @@ public class ClientControl extends Thread {
         return true;
     }
 
+    /**
+     * Process the Redirect Message function, and need to connect to another server
+     *
+     */
     private boolean processRedirectMsg(JsonObject receivedJsonObj) {
         log.info("Redirect");
 
@@ -207,6 +232,11 @@ public class ClientControl extends Thread {
         return true;
     }
 
+    /**
+     * Process Invalid Message function
+     * @param receivedJsonObj
+     * @return Boolean
+     */
     private boolean processInvalidMsg(JsonObject receivedJsonObj) {
         log.info("Client failed to send activity message to server.");
 
@@ -217,17 +247,30 @@ public class ClientControl extends Thread {
         return true;
     }
 
+    /**
+     * Process Register Failed Message, the user have already registered
+     *
+     * @param receivedJsonObj
+     * @return Boolean
+     */
     private boolean processRegisterFailedMsg(JsonObject receivedJsonObj) {
         log.info("Register failed");
 
         String info = receivedJsonObj.get("info").getAsString();
 
-        mainFrame.showInfoBox(info);
+        loginFrame.showInfoBox(info);
         closeConnection();
 
         return true;
     }
 
+
+    /**
+     * The check for received JSON Message must contain a command field.
+     *
+     * @param receivedJsonObj
+     * @return boolean
+     */
     private boolean containCommandField(JsonObject receivedJsonObj) {
         if (!receivedJsonObj.has("command")) {
             InvalidMsg invalidMsg = new InvalidMsg();
@@ -241,6 +284,10 @@ public class ClientControl extends Thread {
         return true;
     }
 
+    /**
+     * The Function for establish a connection
+     * @return boolean
+     */
     public synchronized boolean establishConnection() {
         try {
             Socket socket = new Socket(Settings.getRemoteHostname(), Settings.getRemotePort());
@@ -274,6 +321,10 @@ public class ClientControl extends Thread {
         }
     }
 
+    /**
+     * The function for sending register Message to server, use the writtenMsg in ClientConnection.java
+     *
+     */
     public void sendRegisterMsg() {
         if (connectionClosed) {
             return;
@@ -286,6 +337,10 @@ public class ClientControl extends Thread {
 
         connection.writeMsg(registerMessage);
     }
+
+    /**
+     * The function for sending anonymous Login to server, use the writtenMsg in ClientConnection.java
+     */
 
     public void sendAnonymusLoginMsg() {
         if (connectionClosed) {
@@ -301,6 +356,9 @@ public class ClientControl extends Thread {
         connection.writeMsg(anonymusLoginMessage);
     }
 
+    /**
+     * The function for sending Login Message
+     */
     public void sendLoginMsg() {
         if (connectionClosed) {
             return;
@@ -314,6 +372,9 @@ public class ClientControl extends Thread {
         connection.writeMsg(loginMessage);
     }
 
+    /**
+     * The function for sending Client Authentication Message
+     */
     private void sendClientAuthMsg() {
         if (connectionClosed) {
             return;
@@ -327,7 +388,11 @@ public class ClientControl extends Thread {
         connection.writeMsg(clientAuthMsg.toJsonString());
     }
 
-    public void sendLogoutMsg() {
+    /**
+     * The function for sending Client Authentication Message
+     *
+     */
+    public void sendLogout() {
         if (connectionClosed) {
             return;
         }

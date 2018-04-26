@@ -11,12 +11,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-//import org.apache.logging.log4j.LogManager;
-
 
 @SuppressWarnings("serial")
 public class TextFrame extends JFrame implements ActionListener {
-    //private static final Logger log = LogManager.getLogger();
 
     private JTextArea inputText;
     private JTextArea outputText;

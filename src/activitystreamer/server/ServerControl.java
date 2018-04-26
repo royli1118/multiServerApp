@@ -103,6 +103,7 @@ public class ServerControl extends Control {
         }
     }
 
+
     //	public boolean initiateConnection(int port, String host)
 //	{
 //		// make a connection to another server if remote hostname is supplied
@@ -131,6 +132,8 @@ public class ServerControl extends Control {
 //
 //		return false;
 //	}
+
+
     /*
      * process incoming msg, from connection con return true if the connection
      * should be closed, false otherwise
@@ -156,6 +159,9 @@ public class ServerControl extends Control {
         String msgType = receivedJsonObj.get("command").getAsString();
 
         switch (msgType) {
+            case JsonMessage.LOGIN:
+                return processLoginMsg(con, receivedJsonObj);
+
             case JsonMessage.CLIENT_AUTHENTICATE:
                 return processClientAuthMsg(con, receivedJsonObj);
 
@@ -176,9 +182,6 @@ public class ServerControl extends Control {
 
             case JsonMessage.ACTIVITY_BROADCAST:
                 return processActivityBroadcastMsg(con, receivedJsonObj);
-            case JsonMessage.LOGIN:
-                return processLoginMsg(con, receivedJsonObj);
-
             case JsonMessage.REGISTER:
                 return processRegisterMsg(con, receivedJsonObj);
 

@@ -3,11 +3,19 @@ package activitystreamer.client;
 import activitystreamer.util.Settings;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
 
-
-public class MainFrame implements ActionListener {
+/**
+ * The login frame for Client User implemented by JAVA GUI
+ *
+ * Added by Huanan Li
+ */
+public class LoginFrame implements ActionListener {
     private JFrame frame;
     private JButton loginButton;
     private JButton registerButton;
@@ -17,10 +25,9 @@ public class MainFrame implements ActionListener {
     private JPasswordField passwordText;
     private JButton anonymousButton;
     private ClientControl clientThread;
-
-    public MainFrame() {
-        frame = new JFrame("User login Frame");
-        frame.setSize(450, 200);
+    public LoginFrame() {
+        frame = new JFrame("A User login Frame");
+        frame.setSize(500, 200);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         JPanel panel = new JPanel();
@@ -28,8 +35,8 @@ public class MainFrame implements ActionListener {
         panel.setLayout(null);
 
 
-        JLabel remoteHostLabel = new JLabel("host");
-        remoteHostLabel.setBounds(10, 10, 80, 25);
+        JLabel remoteHostLabel = new JLabel("Remote Host");
+        remoteHostLabel.setBounds(10, 10, 100, 25);
         panel.add(remoteHostLabel);
 
         hostnameText = new JTextField(20);
@@ -37,7 +44,7 @@ public class MainFrame implements ActionListener {
         hostnameText.setBounds(100, 10, 160, 25);
         panel.add(hostnameText);
 
-        JLabel portLabel = new JLabel("port");
+        JLabel portLabel = new JLabel("Port Number");
         portLabel.setBounds(10, 40, 80, 25);
         panel.add(portLabel);
 
@@ -46,7 +53,7 @@ public class MainFrame implements ActionListener {
         hostportText.setBounds(100, 40, 160, 25);
         panel.add(hostportText);
 
-        JLabel userLabel = new JLabel("User");
+        JLabel userLabel = new JLabel("UserName");
         userLabel.setBounds(10, 70, 80, 25);
         panel.add(userLabel);
 
@@ -74,7 +81,7 @@ public class MainFrame implements ActionListener {
         panel.add(registerButton);
         registerButton.addActionListener(this);
 
-        anonymousButton = new JButton("Anonymous login");
+        anonymousButton = new JButton("Login by anonymous");
         anonymousButton.setBounds(270, 130, 160, 25);
         panel.add(anonymousButton);
         anonymousButton.addActionListener(this);
@@ -95,6 +102,10 @@ public class MainFrame implements ActionListener {
         frame.dispose();
     }
 
+    /**
+     * The collection of Action performed
+     *
+     */
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == loginButton) {
             if (passwordText.getPassword().length == 0 ||

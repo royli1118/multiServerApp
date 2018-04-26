@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 
 
 public class Server {
+
     private static final Logger log = LogManager.getLogger();
 
     private static void help(Options options) {
