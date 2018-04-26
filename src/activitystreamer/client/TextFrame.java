@@ -22,6 +22,7 @@ public class TextFrame extends JFrame implements ActionListener {
     private JTextArea outputText;
     private JButton sendButton;
     private JButton disconnectButton;
+    private ClientControl clientThread;
 
     public TextFrame() {
         setTitle("ActivityStreamer Text I/O");
@@ -64,6 +65,8 @@ public class TextFrame extends JFrame implements ActionListener {
         setSize(1280, 768);
         setVisible(true);
 
+        clientThread = ClientControl.getInstance();
+
         addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 ClientControl.getInstance().disconnect();
@@ -91,7 +94,10 @@ public class TextFrame extends JFrame implements ActionListener {
         if (e.getSource() == sendButton) {
             String msg = inputText.getText().trim().replaceAll("\r", "").replaceAll("\n", "").replaceAll("\t", "");
             if (!msg.isEmpty()) {
-                ClientControl.getInstance().sendTOServerJsonObject(msg);
+                if (clientThread.connect()) {
+                    clientThread.sendTOServerJsonObject(msg);
+                }
+
             } else {
                 showErrorMsg("Message cannot be empty");
                 return;

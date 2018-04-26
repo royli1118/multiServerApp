@@ -12,9 +12,17 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * This class deals with main logic of servers' behavior. It is responsible for processing clients'
+ * request to login, logout, register, broadcast message and so forth. It also handles servers'
+ * request to authenticate, redirect, server announce and so forth.
+ *
+ * @author Zelei Cui
+ */
 
 public class ServerControl extends Control {
     private static final Logger log = LogManager.getLogger();
@@ -24,7 +32,7 @@ public class ServerControl extends Control {
     private ArrayList<Connection> clientConnectionList = new ArrayList<>();
     private ArrayList<ServerSettings> serverInfoList = new ArrayList<>();
     private HashMap<String, String> clientInfoList = new HashMap<>();
-
+    // authenticate id between servers
     private String id;
 
     private ServerControl() {
@@ -50,12 +58,13 @@ public class ServerControl extends Control {
         if (control == null) {
             control = new ServerControl();
         }
-
         return (ServerControl) control;
     }
 
     /*
      * a new incoming connection
+     * @param A Socket to establish a connection
+     * @return A ServerConnection object which requires connection
      */
     @Override
     public ServerConnection incomingConnection(Socket s) throws IOException {
@@ -68,31 +77,27 @@ public class ServerControl extends Control {
 
     /*
      * a new outgoing connection
+     * @param A Socket to establish a connection
+     * @return A ServerConnection object which requires connection
      */
-//	public void outgoingConnection(Socket s, boolean toLoadBalancer) throws IOException
-//	{
-//		ServerConnection con = new ServerConnection(s);
-//
-//		// Send authentication message
-//		AuthMsg authJson = new AuthMsg();
-//		authJson.setSecret(Settings.getSecret());
-//
-//		String authJsonStr = authJson.toJsonString();
-//		con.writeMsg(authJsonStr);
-//
-//		if (toLoadBalancer)
-//		{
-//			// Send server announce to load balancer immediately
-//			doActivity();
-//		}
-//		else
-//		{
-//			serverConnectionList.add(con);
-//		}
-//	}
+    @Override
+    public ServerConnection outgoingConnection(Socket s) throws IOException {
+        ServerConnection con = new ServerConnection(s);
+
+        // Send authentication message
+        AuthMsg authJson = new AuthMsg();
+        authJson.setSecret(Settings.getSecret());
+
+        String authJsonStr = authJson.toJsonString();
+        con.writeMsg(authJsonStr);
+
+        serverConnectionList.add(con);
+        return con;
+    }
 
     /*
      * the connection has been closed
+     * @param the connection to be closed
      */
     @Override
     public void connectionClosed(Connection con) {
@@ -103,40 +108,36 @@ public class ServerControl extends Control {
         }
     }
 
-
-    //	public boolean initiateConnection(int port, String host)
-//	{
-//		// make a connection to another server if remote hostname is supplied
-//		if (host != null)
-//		{
-//			try
-//			{
-//				outgoingConnection(new Socket(host, port));
-//
-//				return true;
-//			}
-//			catch (UnknownHostException e)
-//			{
-//				log.info("Server establish connection failed. Unknown Host: " + e.getMessage());
-//
-//				System.exit(-1);
-//			}
-//			catch (IOException e)
-//			{
-//				log.error("Server failed to make plain connection to " + host + ":"
-//						+ port + " :" + e);
-//
-//				return false;
-//			}
-//		}
-//
-//		return false;
-//	}
-
-
     /*
+     * the connection has been closed
+     * @param the connection to be closed
+     * @return true if connection succeeds, false otherwise
+     */
+    public boolean initiateConnection(int port, String host) {
+        // make a connection to another server if remote hostname is supplied
+        if (host != null) {
+            try {
+                outgoingConnection(new Socket(host, port));
+                return true;
+            } catch (UnknownHostException e) {
+                log.info("Server establish connection failed. Unknown Host: " + e.getMessage());
+                System.exit(-1);
+            } catch (IOException e) {
+                log.error("Server failed to make plain connection to " + host + ":"
+                        + port + " :" + e);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
      * process incoming msg, from connection con return true if the connection
      * should be closed, false otherwise
+     *
+     * @param con message to be processed
+     * @param msg message comes from connection con
+     * @return true to close the connection, false otherwise
      */
     @Override
     public synchronized boolean process(Connection con, String msg) {
@@ -148,8 +149,8 @@ public class ServerControl extends Control {
             receivedJsonObj = new Gson().fromJson(msg, JsonObject.class);
         } catch (JsonSyntaxException e) {
             log.debug("Server receiving msg failed. Not json format: " + e.getMessage());
-
-            return true;
+            //return true;
+            return processInvalidString(con, "Server receiving msg failed. Not json format");
         }
 
         if (!containCommandField(con, receivedJsonObj)) {
@@ -161,9 +162,6 @@ public class ServerControl extends Control {
         switch (msgType) {
             case JsonMessage.LOGIN:
                 return processLoginMsg(con, receivedJsonObj);
-
-            case JsonMessage.CLIENT_AUTHENTICATE:
-                return processClientAuthMsg(con, receivedJsonObj);
 
             case JsonMessage.AUTHENTICATE:
                 return processAuthMsg(con, receivedJsonObj);
@@ -182,6 +180,7 @@ public class ServerControl extends Control {
 
             case JsonMessage.ACTIVITY_BROADCAST:
                 return processActivityBroadcastMsg(con, receivedJsonObj);
+
             case JsonMessage.REGISTER:
                 return processRegisterMsg(con, receivedJsonObj);
 
@@ -194,8 +193,9 @@ public class ServerControl extends Control {
     }
 
     /*
-     * Called once every few seconds Return true if server should shut down,
-     * false otherwise
+     * Called once every few seconds to synchronize servers' information
+     * @return true if server should shut down, false otherwise
+     *
      */
     @Override
     public boolean doActivity() {
@@ -217,7 +217,8 @@ public class ServerControl extends Control {
     }
 
     /*
-     * Other methods as needed
+     * Other message processing methods, return true if the connection should be closed,
+     * false otherwise.
      */
     private boolean processLogoutMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("user logout");
@@ -235,6 +236,11 @@ public class ServerControl extends Control {
         return true;
     }
 
+    // process invalid message?????
+    // process invalid message?????
+    // process invalid message?????
+    // process invalid message?????
+    // process invalid message?????
     private boolean processInvalidMsg(JsonObject receivedJsonObj) {
         String errorInfo = receivedJsonObj.get("info").getAsString();
 
@@ -270,7 +276,6 @@ public class ServerControl extends Control {
             return true;
         }
 
-
         if (clientConnectionList.size() < CLIENT_CONNECTION_UPPER_LIMIT) {
             log.info("logged in as user " + username);
 
@@ -279,28 +284,26 @@ public class ServerControl extends Control {
 
             String loginSuccJsonStr = loginSuccMsg.toJsonString();
             con.writeMsg(loginSuccJsonStr);
-
-            log.info("Redirected");
-
-//			RedirectMsg redirectMsg = new RedirectMsg();
-//			redirectMsg.setHost(serverInfo.getRemoteHostname());
-//			redirectMsg.setPort(serverInfo.getRemotePort());
-//			redirectMsg.setId(serverInfo.getId());
-//
-//			String redirectMsgJsonStr = redirectMsg.toJsonString();
-//			con.writeMsg(redirectMsgJsonStr);
         }
         // All servers are too busy
         else {
             log.info("server is too busy");
+            log.info("Redirected");
 
             LoginFailedMsg loginFailedMsg = new LoginFailedMsg();
             loginFailedMsg.setInfo("server is too busy");
 
-            String registFailedJsonStr = loginFailedMsg.toJsonString();
-            con.writeMsg(registFailedJsonStr);
-        }
+            //iterate serverinfo and find the lowest connection number
+            RedirectMsg redirectMsg = new RedirectMsg();
+            redirectMsg.setHost(serverInfoList.get(0).getRemoteHostname());
+            redirectMsg.setPort(serverInfoList.get(0).getRemotePort());
+            redirectMsg.setId(serverInfoList.get(0).getId());
 
+            String redirectMsgJsonStr = redirectMsg.toJsonString();
+            con.writeMsg(redirectMsgJsonStr);
+
+            return false;
+        }
         return true;
     }
 
@@ -338,11 +341,9 @@ public class ServerControl extends Control {
 
             // Add client info
             clientInfoList.put(username, secret);
-
             return true;
         }
     }
-
 
     private boolean processServerAnnounceMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("Server announce received");
@@ -372,7 +373,6 @@ public class ServerControl extends Control {
         else {
             serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt());
         }
-
         return false;
     }
 
@@ -402,11 +402,11 @@ public class ServerControl extends Control {
 
         // Check username and secret!!
         String username = receivedJsonObj.get("username").getAsString();
-        String clientSentId = receivedJsonObj.get("id").getAsString();
+        String secret = receivedJsonObj.get("secret").getAsString();
 
-        if (!clientSentId.equals(id)) {
+        if (!username.equals(JsonMessage.ANONYMOUS_USERNAME) && !hasClientInfo(username, secret)) {
             // Send login failed info
-            log.info("server is too busy");
+            log.info("Client auth failed");
 
             InvalidMsg invalidMsg = new InvalidMsg();
             invalidMsg.setInfo("Client auth failed");
@@ -419,8 +419,8 @@ public class ServerControl extends Control {
         log.debug("Broadcast activity message received from client");
 
         // Convert it to activity broadcast message
-        JsonObject actJsonObj = receivedJsonObj.get("activity").getAsJsonObject();
-        String content = actJsonObj.get("object").getAsString();
+        JsonObject jsonObj = receivedJsonObj.get("activity").getAsJsonObject();
+        String content = jsonObj.getAsString();
 
         ActBroadMsg actBroadMsg = new ActBroadMsg();
         actBroadMsg.setActor(username);
@@ -434,47 +434,13 @@ public class ServerControl extends Control {
         return false;
     }
 
-    private boolean processClientAuthMsg(Connection con, JsonObject receivedJsonObj) {
-        // Validate login message format
-        if (!isUserInfoMsgValid(con, receivedJsonObj)) {
-            return true;
-        }
-
-        String username = receivedJsonObj.get("username").getAsString();
-        String clientSentId = receivedJsonObj.get("id").getAsString();
-
-        if (!clientSentId.equals(id)) { // 需要删掉
-            // Send login failed info
-            log.info("server is too busy");
-
-            InvalidMsg invalidMsg = new InvalidMsg();
-            invalidMsg.setInfo("Client auth faile");
-
-            con.writeMsg(invalidMsg.toJsonString());
-
-            return true;
-        }
-
-        log.info("Connected with broadcaster in as user " + username);
-
-        LoginSuccMsg loginSuccMsg = new LoginSuccMsg();
-        loginSuccMsg.setInfo("Connected with broadcaster successful");
-
-        String loginSuccJsonStr = loginSuccMsg.toJsonString();
-        con.writeMsg(loginSuccJsonStr);
-
-        clientConnectionList.add(con);
-
-        return false;
-    }
-
     private boolean processAuthMsg(Connection con, JsonObject receivedJsonObj) {
         // This server has too many children
         if (serverConnectionList.size() >= SERVER_CONNECTION_UPPER_LIMIT) {
-            log.info("Auth faield: too many servers connecting to this server");
+            log.info("Auth failed: too many servers connecting to this server");
 
             AuthFailMsg authFailedMsg = new AuthFailMsg();
-            authFailedMsg.setInfo("Auth faield: too many servers connecting to this server");
+            authFailedMsg.setInfo("Auth failed: too many servers connecting to this server");
 
             String authFailedJsonStr = authFailedMsg.toJsonString();
             con.writeMsg(authFailedJsonStr);
@@ -483,7 +449,7 @@ public class ServerControl extends Control {
         }
         // Json message format incorrect
         else if (!receivedJsonObj.has("secret")) {
-            log.info("Auth faield: the supplied secret is incorrect");
+            log.info("Auth failed: the supplied secret is incorrect");
 
             AuthFailMsg authFailedMsg = new AuthFailMsg();
             authFailedMsg.setInfo("the supplied secret is incorrect");
@@ -497,7 +463,7 @@ public class ServerControl extends Control {
         String secret = receivedJsonObj.get("secret").getAsString();
 
         if (!secret.equals(Settings.getSecret())) {
-            log.info("Auth faield");
+            log.info("Auth failed");
 
             AuthFailMsg authFailedMsg = new AuthFailMsg();
             authFailedMsg.setInfo("the supplied secret is incorrect: " + secret);
@@ -541,8 +507,7 @@ public class ServerControl extends Control {
         }
     }
 
-//	public boolean connectToServer()
-//	{
+//	public boolean connectToServer() {
 //		return initiateConnection(Settings.getLoadBalancerPort(), Settings.getLoadBalancerHostname());
 //	}
 
@@ -554,7 +519,6 @@ public class ServerControl extends Control {
 
             return false;
         }
-
         return true;
     }
 
@@ -598,6 +562,20 @@ public class ServerControl extends Control {
         return true;
     }
 
+    /**
+     * A method that the server send back the invalid command which is not the JsonObject
+     * @param con
+     * @param invalidJsonObj
+     * @return
+     */
+    private boolean processInvalidString(Connection con, String invalidJsonObj) {
+        InvalidMsg invalidMsg = new InvalidMsg();
+        invalidMsg.setInfo("Invalid Message: " + invalidJsonObj);
+        con.writeMsg(invalidMsg.toJsonString());
+        return true;
+    }
+
+
     private boolean isServerAuthenticated(Connection con) {
         for (Connection connection : serverConnectionList) {
             if (con.getSocket().getPort() == connection.getSocket().getPort()) {
@@ -610,20 +588,6 @@ public class ServerControl extends Control {
         }
 
         return false;
-    }
-
-    private ServerSettings loadBalance() {
-        int minLoad = CLIENT_CONNECTION_UPPER_LIMIT;
-        ServerSettings clusterWithLowestLoad = null;
-
-        for (ServerSettings cluster : serverInfoList) {
-            if (cluster.getServerLoad() < minLoad) {
-                minLoad = cluster.getServerLoad();
-                clusterWithLowestLoad = cluster;
-            }
-        }
-
-        return clusterWithLowestLoad;
     }
 
     private ServerSettings findServer(String id) {

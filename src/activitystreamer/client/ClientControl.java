@@ -188,9 +188,7 @@ public class ClientControl extends Thread {
      */
     private boolean processUnknownMsg(JsonObject receivedJsonObj) {
         log.info("Unknown message received");
-
         disconnect();
-
         return true;
     }
 
@@ -232,9 +230,9 @@ public class ClientControl extends Thread {
     private boolean processInvalidMsg(JsonObject receivedJsonObj) {
         log.info("Client failed to send activity message to server.");
 
-        String info = receivedJsonObj.get("info").getAsString();
-        textFrame.showErrorMsg(info);
-        disconnect();
+//        String info = receivedJsonObj.get("info").getAsString();
+        textFrame.sendOutPutText(receivedJsonObj);
+//        disconnect();
 
         return true;
     }
