@@ -443,7 +443,7 @@ public class ServerControl extends Control {
         String username = receivedJsonObj.get("username").getAsString();
         String clientSentId = receivedJsonObj.get("id").getAsString();
 
-        if (!clientSentId.equals(id)) {
+        if (!clientSentId.equals(id)) { // 需要删掉
             // Send login failed info
             log.info("server is too busy");
 

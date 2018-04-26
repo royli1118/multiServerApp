@@ -47,17 +47,9 @@ public class ClientControl extends Thread {
      * It is called by GUI SEND COMMAND to send any JSON message
      * @param activityContent
      */
-    public void sendActivityObject(String activityContent) {
-        log.info("Activity message sent: " + activityContent);
-
-        ActivityMsg activityMsg = new ActivityMsg();
-        activityMsg.setUsername(Settings.getUsername());
-        activityMsg.setSecret(Settings.getSecret());
-        activityMsg.setObject(activityContent);
-        activityMsg.setId(serverId);
-
-        String activityMessage = activityMsg.toJsonString();
-        connection.writeMsg(activityMessage);
+    public void sendTOServerJsonObject(String activityContent) {
+        log.info("Client message sent: " + activityContent);
+        connection.writeMsg(activityContent);
     }
 
     /**
@@ -97,7 +89,7 @@ public class ClientControl extends Thread {
             case JsonMessage.ACTIVITY_BROADCAST:
                 log.info("Activity broadcast received");
 
-                textFrame.displayActivityMessageText(receivedJson);
+                textFrame.sendOutPutText(receivedJson);
 
                 return false;
 

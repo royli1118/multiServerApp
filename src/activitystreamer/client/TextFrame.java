@@ -2,6 +2,8 @@ package activitystreamer.client;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -15,6 +17,7 @@ import java.awt.event.WindowEvent;
 @SuppressWarnings("serial")
 public class TextFrame extends JFrame implements ActionListener {
 
+    private static final Logger log = LogManager.getLogger();
     private JTextArea inputText;
     private JTextArea outputText;
     private JButton sendButton;
@@ -70,7 +73,7 @@ public class TextFrame extends JFrame implements ActionListener {
         });
     }
 
-    public void displayActivityMessageText(final JsonObject obj) {
+    public void sendOutPutText(final JsonObject obj) {
         String newText = new Gson().toJson(obj);
         String oldText = outputText.getText();
 
@@ -87,14 +90,14 @@ public class TextFrame extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == sendButton) {
             String msg = inputText.getText().trim().replaceAll("\r", "").replaceAll("\n", "").replaceAll("\t", "");
-
-            if (msg.isEmpty()) {
+            if (!msg.isEmpty()) {
+                ClientControl.getInstance().sendTOServerJsonObject(msg);
+            } else {
                 showErrorMsg("Message cannot be empty");
-
                 return;
             }
 
-            ClientControl.getInstance().sendActivityObject(msg);
+
         } else if (e.getSource() == disconnectButton) {
             ClientControl.getInstance().disconnect();
         }
