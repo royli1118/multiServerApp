@@ -199,7 +199,6 @@ public class ServerControl extends Control {
     }
 
 
-
     /*
      * Called once every few seconds to synchronize servers' information
      * @return true if server should shut down, false otherwise
@@ -338,29 +337,31 @@ public class ServerControl extends Control {
         }
         // Register success
         else {
+            // First we need to have a check there is only one server or multiple servers, if multiservers exists
+            // the server will broadcast the lock_request function
+            if (serverConnectionList.size() > 0) {
+                // If the User from client have register success, this server will forward a message to other servers
+                LockRequestMsg lockrequestMsg = new LockRequestMsg();
+                lockrequestMsg.setUsername(username);
+                lockrequestMsg.setSecret(secret);
+                // In this case, I insert a new variable into the lockrequest, which is original server.
+                lockrequestMsg.setOriginalServer(con.getSocket().getInetAddress().getHostAddress() + ":" + con.getSocket().getPort());
+                String lockrequestJsonStr = lockrequestMsg.toJsonString();
+                forwardToOtherServers(con, lockrequestJsonStr);
+            } else {
+                // If only in one server
+                log.info("Register_Success");
 
-            // If the User from client have register success, this server will forward a message to other servers
-            LockRequestMsg lockrequestMsg = new LockRequestMsg();
-            lockrequestMsg.setUsername(username);
-            lockrequestMsg.setSecret(secret);
-            lockrequestMsg.setOriginalServer(con.getSocket().getInetAddress().getHostAddress()+ ":" +con.getSocket().getPort());
+                // Send register success message
+                RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
+                registerSuccMsg.setInfo("register success for " + username);
 
-            String lockrequestJsonStr = lockrequestMsg.toJsonString();
-            forwardToOtherServers(con,lockrequestJsonStr);
-//
-//            log.info("Register_Success");
-//
-//            // Send register success message
-//            RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
-//            registerSuccMsg.setInfo("register success for " + username);
-//
-//            String registSuccJsonStr = registerSuccMsg.toJsonString();
-//            con.writeMsg(registSuccJsonStr);
-//
-//            // Add client info
-//            clientInfoList.put(username, secret);
+                String registSuccJsonStr = registerSuccMsg.toJsonString();
+                con.writeMsg(registSuccJsonStr);
 
-
+                // Add client info
+                clientInfoList.put(username, secret);
+            }
 
 
             return true;
@@ -369,6 +370,7 @@ public class ServerControl extends Control {
 
     /**
      * Process server lock request Message
+     *
      * @param con
      * @param receivedJsonObj
      * @return
@@ -381,21 +383,21 @@ public class ServerControl extends Control {
         String originalServer = receivedJsonObj.get("originalServer").getAsString();
         // If the username not contain in the list
 
-        if (!clientInfoList.containsKey(username)){
+        if (!clientInfoList.containsKey(username)) {
             LockDeniedMsg lockDeniedMsg = new LockDeniedMsg();
             lockDeniedMsg.setSecret(secret);
             lockDeniedMsg.setUsername(username);
             lockDeniedMsg.setOriginalServer(originalServer);
             String lockdeniedJsonStr = lockDeniedMsg.toJsonString();
-            forwardBackToOriginalServer(con,lockdeniedJsonStr,originalServer);
+            forwardBackToOriginalServer(con, lockdeniedJsonStr, originalServer);
 
-        }else{
+        } else {
             LockAllowedMsg lockAllowedMsg = new LockAllowedMsg();
             lockAllowedMsg.setSecret(secret);
             lockAllowedMsg.setUsername(username);
 
             String lockallowJsonStr = lockAllowedMsg.toJsonString();
-            forwardBackToOriginalServer(con,lockallowJsonStr,originalServer);
+            forwardBackToOriginalServer(con, lockallowJsonStr, originalServer);
         }
 
         return false;
@@ -403,6 +405,7 @@ public class ServerControl extends Control {
 
     /**
      * Push the lock message back to Original Server
+     *
      * @param con
      * @param lockedMsgJsonStr
      * @param originalServer
@@ -410,12 +413,12 @@ public class ServerControl extends Control {
      */
     private boolean forwardBackToOriginalServer(Connection con, String lockedMsgJsonStr, String originalServer) {
         String host = originalServer.substring(0, originalServer.indexOf(':'));
-        int port = Integer.parseInt(originalServer.substring(originalServer.indexOf(':')+1));
+        int port = Integer.parseInt(originalServer.substring(originalServer.indexOf(':') + 1));
         try {
             Socket s = new Socket(host, port);
             Connection conoriginal = new Connection(s);
             conoriginal.writeMsg(lockedMsgJsonStr);
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
             log.info("Cannot connect to original Server");
         }
@@ -425,6 +428,7 @@ public class ServerControl extends Control {
 
     /**
      * Process Server will received the locked Allowed process
+     *
      * @param con
      * @param receivedJsonObj
      * @return
@@ -452,6 +456,7 @@ public class ServerControl extends Control {
 
     /**
      * Process Server will received the locked Allowed process
+     *
      * @param con
      * @param receivedJsonObj
      * @return boolean
@@ -471,6 +476,7 @@ public class ServerControl extends Control {
 
     /**
      * Processing Server Announce Message
+     *
      * @param con
      * @param receivedJsonObj
      * @return boolean
@@ -694,6 +700,7 @@ public class ServerControl extends Control {
 
     /**
      * A method that the server send back the invalid command which is not the JsonObject
+     *
      * @param con
      * @param invalidJsonObj
      * @return
