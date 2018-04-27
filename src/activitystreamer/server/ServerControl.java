@@ -45,7 +45,7 @@ public class ServerControl extends Control {
         /*
          * Do some further initialization here if necessary
          */
-        //connectToServer();
+        connectToServer();
 
         // start the server's activity loop
         // it will call doActivity every few seconds
@@ -132,7 +132,7 @@ public class ServerControl extends Control {
     }
 
     /**
-     * process incoming msg, from connection con return true if the connection
+     * process incoming Message, either from client or server, from connection con return true if the connection
      * should be closed, false otherwise
      *
      * @param con message to be processed
@@ -186,10 +186,13 @@ public class ServerControl extends Control {
 
             case JsonMessage.SERVER_ANNOUNCE:
                 return processServerAnnounceMsg(con, receivedJsonObj);
+
             case JsonMessage.LOCK_REQUEST:
                 return processServerLockRequestMsg(con, receivedJsonObj);
+
             case JsonMessage.LOCK_ALLOWED:
                 return processServerLockAllowedMsg(con, receivedJsonObj);
+
             case JsonMessage.LOCK_DENIED:
                 return processServerLockDeniedMsg(con, receivedJsonObj);
 
@@ -253,12 +256,9 @@ public class ServerControl extends Control {
 
         log.info(errorInfo);
 
-        if (errorInfo.equals(JsonMessage.UNAUTHENTICATED_SERVER) ||
-                errorInfo.equals(JsonMessage.REPEATED_AUTHENTICATION)) {
-            return true;
-        }
+        return errorInfo.equals(JsonMessage.UNAUTHENTICATED_SERVER) ||
+                errorInfo.equals(JsonMessage.REPEATED_AUTHENTICATION);
 
-        return false;
     }
 
     private boolean processLoginMsg(Connection con, JsonObject receivedJsonObj) {
@@ -292,9 +292,9 @@ public class ServerControl extends Control {
             String loginSuccJsonStr = loginSuccMsg.toJsonString();
             con.writeMsg(loginSuccJsonStr);
         }
-        // All servers are too busy
+        // This server is too busy
         else {
-            log.info("server is too busy");
+            log.info("This server is too busy");
             log.info("Redirected");
 
             LoginFailedMsg loginFailedMsg = new LoginFailedMsg();
@@ -512,6 +512,12 @@ public class ServerControl extends Control {
         return false;
     }
 
+    /**
+     * Process activity broadcast from other server
+     * @param con
+     * @param receivedJsonObj
+     * @return boolean
+     */
     private boolean processActivityBroadcastMsg(Connection con, JsonObject receivedJsonObj) {
         log.debug("Activity broadcast message received from port: " + con.getSocket().getPort());
 
@@ -528,6 +534,13 @@ public class ServerControl extends Control {
         return false;
     }
 
+
+    /**
+     * Process activity message from client
+     * @param con
+     * @param receivedJsonObj
+     * @return boolean
+     */
     private boolean processActivityMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("Activity message received from port: " + con.getSocket().getPort());
 
@@ -623,12 +636,21 @@ public class ServerControl extends Control {
         }
     }
 
+    /**
+     * For broadcasting to all servers
+     * @param jsonStr
+     */
     private void broadcastToAllOtherServers(String jsonStr) {
         for (Connection con : serverConnectionList) {
             con.writeMsg(jsonStr);
         }
     }
 
+    /**
+     * Forward to the other servers
+     * @param current
+     * @param jsonStr
+     */
     private void forwardToOtherServers(Connection current, String jsonStr) {
         for (Connection con : serverConnectionList) {
             if (current.getSocket().getPort() != con.getSocket().getPort()) {
@@ -637,16 +659,31 @@ public class ServerControl extends Control {
         }
     }
 
+    /**
+     * For broadcasting to All Clients which adjacent to the server
+     * @param jsonStr
+     */
     private void broadcastToAllClients(String jsonStr) {
         for (Connection con : clientConnectionList) {
             con.writeMsg(jsonStr);
         }
     }
 
-//	public boolean connectToServer() {
-//		return initiateConnection(Settings.getLoadBalancerPort(), Settings.getLoadBalancerHostname());
-//	}
 
+    /**
+     * For broadcasting intitialize the connection
+     * @return boolean
+     */
+    public boolean connectToServer() {
+		return initiateConnection(Settings.getLoadBalancerPort(), Settings.getLoadBalancerHostname());
+	}
+
+    /**
+     *
+     * @param con
+     * @param receivedJsonObj
+     * @return boolean
+     */
     private boolean containCommandField(Connection con, JsonObject receivedJsonObj) {
         if (!receivedJsonObj.has("command")) {
             InvalidMsg invalidMsg = new InvalidMsg();
@@ -703,7 +740,7 @@ public class ServerControl extends Control {
      *
      * @param con
      * @param invalidJsonObj
-     * @return
+     * @return boolean
      */
     private boolean processInvalidString(Connection con, String invalidJsonObj) {
         InvalidMsg invalidMsg = new InvalidMsg();
@@ -713,6 +750,11 @@ public class ServerControl extends Control {
     }
 
 
+    /**
+     * Check if the server is Authentiated
+     * @param con
+     * @return boolean
+     */
     private boolean isServerAuthenticated(Connection con) {
         for (Connection connection : serverConnectionList) {
             if (con.getSocket().getPort() == connection.getSocket().getPort()) {

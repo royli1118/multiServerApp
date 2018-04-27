@@ -43,9 +43,12 @@ public class Control extends Thread {
         return false;
     }
 
-    /*
-     * Processing incoming messages from the connection. Return true if the
-     * connection should close.
+    /**
+     * Processing incoming messages from the Server.
+     * Return true if the connection should close.
+     * @param con
+     * @param msg
+     * @return boolean
      */
     public synchronized boolean process(Connection con, String msg) {
         return true;
