@@ -27,6 +27,10 @@ public class JsonMessage {
     public final static String UNAUTHENTICATED_SERVER = "This is an unauthenticated server!!";
     public final static String REPEATED_AUTHENTICATION = "This server has already been authenticated";
     public final static String ANONYMOUS_USERNAME = "anonymous";
+    public final static String LOCK_REQUEST = "LOCK_REQUEST";
+    public final static String LOCK_DENIED = "LOCK_DENIED";
+    public final static String LOCK_ALLOWED = "LOCK_ALLOWED";
+
     private String command = "";
 
 

@@ -63,9 +63,14 @@ public class ClientControl extends Thread {
         closeConnection();
         loginFrame.close();
         textFrame.dispose();
+        System.exit(-1);
     }
 
-
+    /**
+     * Process all incoming JSON String, and return the actions
+     * @param receivedJsonStr
+     * @return
+     */
     public synchronized boolean process(String receivedJsonStr) {
         log.debug("Client received: " + receivedJsonStr);
 
@@ -203,7 +208,7 @@ public class ClientControl extends Thread {
         closeConnection();
 
         // Setup with new host and port number
-        serverId = receivedJsonObj.get("id").getAsString();
+//        serverId = receivedJsonObj.get("id").getAsString();
         String newHost = receivedJsonObj.get("hostname").getAsString();
         int newPort = receivedJsonObj.get("port").getAsInt();
 

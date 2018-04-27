@@ -186,11 +186,19 @@ public class ServerControl extends Control {
 
             case JsonMessage.SERVER_ANNOUNCE:
                 return processServerAnnounceMsg(con, receivedJsonObj);
+            case JsonMessage.LOCK_REQUEST:
+                return processServerLockRequestMsg(con, receivedJsonObj);
+            case JsonMessage.LOCK_ALLOWED:
+                return processServerLockAllowedMsg(con, receivedJsonObj);
+            case JsonMessage.LOCK_DENIED:
+                return processServerLockDeniedMsg(con, receivedJsonObj);
 
             default:
                 return processInvalidCommand(con, receivedJsonObj);
         }
     }
+
+
 
     /*
      * Called once every few seconds to synchronize servers' information
@@ -330,21 +338,143 @@ public class ServerControl extends Control {
         }
         // Register success
         else {
-            log.info("Register_Success");
 
-            // Send register success message
-            RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
-            registerSuccMsg.setInfo("register success for " + username);
+            // If the User from client have register success, this server will forward a message to other servers
+            LockRequestMsg lockrequestMsg = new LockRequestMsg();
+            lockrequestMsg.setUsername(username);
+            lockrequestMsg.setSecret(secret);
+            lockrequestMsg.setOriginalServer(con.getSocket().getInetAddress().getHostAddress()+ ":" +con.getSocket().getPort());
 
-            String registSuccJsonStr = registerSuccMsg.toJsonString();
-            con.writeMsg(registSuccJsonStr);
+            String lockrequestJsonStr = lockrequestMsg.toJsonString();
+            forwardToOtherServers(con,lockrequestJsonStr);
+//
+//            log.info("Register_Success");
+//
+//            // Send register success message
+//            RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
+//            registerSuccMsg.setInfo("register success for " + username);
+//
+//            String registSuccJsonStr = registerSuccMsg.toJsonString();
+//            con.writeMsg(registSuccJsonStr);
+//
+//            // Add client info
+//            clientInfoList.put(username, secret);
 
-            // Add client info
-            clientInfoList.put(username, secret);
+
+
+
             return true;
         }
     }
 
+    /**
+     * Process server lock request Message
+     * @param con
+     * @param receivedJsonObj
+     * @return
+     */
+    private boolean processServerLockRequestMsg(Connection con, JsonObject receivedJsonObj) {
+        log.info("Lock Request received");
+
+        String secret = receivedJsonObj.get("secret").getAsString();
+        String username = receivedJsonObj.get("username").getAsString();
+        String originalServer = receivedJsonObj.get("originalServer").getAsString();
+        // If the username not contain in the list
+
+        if (!clientInfoList.containsKey(username)){
+            LockDeniedMsg lockDeniedMsg = new LockDeniedMsg();
+            lockDeniedMsg.setSecret(secret);
+            lockDeniedMsg.setUsername(username);
+            lockDeniedMsg.setOriginalServer(originalServer);
+            String lockdeniedJsonStr = lockDeniedMsg.toJsonString();
+            forwardBackToOriginalServer(con,lockdeniedJsonStr,originalServer);
+
+        }else{
+            LockAllowedMsg lockAllowedMsg = new LockAllowedMsg();
+            lockAllowedMsg.setSecret(secret);
+            lockAllowedMsg.setUsername(username);
+
+            String lockallowJsonStr = lockAllowedMsg.toJsonString();
+            forwardBackToOriginalServer(con,lockallowJsonStr,originalServer);
+        }
+
+        return false;
+    }
+
+    /**
+     * Push the lock message back to Original Server
+     * @param con
+     * @param lockedMsgJsonStr
+     * @param originalServer
+     * @return
+     */
+    private boolean forwardBackToOriginalServer(Connection con, String lockedMsgJsonStr, String originalServer) {
+        String host = originalServer.substring(0, originalServer.indexOf(':'));
+        int port = Integer.parseInt(originalServer.substring(originalServer.indexOf(':')+1));
+        try {
+            Socket s = new Socket(host, port);
+            Connection conoriginal = new Connection(s);
+            conoriginal.writeMsg(lockedMsgJsonStr);
+        }catch (IOException e){
+            e.printStackTrace();
+            log.info("Cannot connect to original Server");
+        }
+
+        return true;
+    }
+
+    /**
+     * Process Server will received the locked Allowed process
+     * @param con
+     * @param receivedJsonObj
+     * @return
+     */
+    private boolean processServerLockAllowedMsg(Connection con, JsonObject receivedJsonObj) {
+
+        String secret = receivedJsonObj.get("secret").getAsString();
+        String username = receivedJsonObj.get("username").getAsString();
+
+        log.info("Register_Success");
+
+        // Send register success message
+        RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
+        registerSuccMsg.setInfo("register success for " + username);
+
+        String registSuccJsonStr = registerSuccMsg.toJsonString();
+        con.writeMsg(registSuccJsonStr);
+
+        // Add client info
+        clientInfoList.put(username, secret);
+
+        return false;
+    }
+
+
+    /**
+     * Process Server will received the locked Allowed process
+     * @param con
+     * @param receivedJsonObj
+     * @return boolean
+     */
+    private boolean processServerLockDeniedMsg(Connection con, JsonObject receivedJsonObj) {
+
+        String username = receivedJsonObj.get("username").getAsString();
+
+        RegisterFailedMsg registerFailedMsg = new RegisterFailedMsg();
+        registerFailedMsg.setInfo(username + " is already registered in other distributed Servers");
+
+        String registFailedJsonStr = registerFailedMsg.toJsonString();
+        con.writeMsg(registFailedJsonStr);
+
+        return true;
+    }
+
+    /**
+     * Processing Server Announce Message
+     * @param con
+     * @param receivedJsonObj
+     * @return boolean
+     */
     private boolean processServerAnnounceMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("Server announce received");
 
