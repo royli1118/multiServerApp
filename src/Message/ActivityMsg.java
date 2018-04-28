@@ -5,7 +5,6 @@ public class ActivityMsg extends JsonMessage {
     private Activity activity = new Activity();
     private String username = "";
     private String secret = "";
-    private String id = "";
 
     public ActivityMsg() {
         setCommand(JsonMessage.ACTIVITY_MESSAGE);
@@ -13,10 +12,6 @@ public class ActivityMsg extends JsonMessage {
 
     public void setObject(String obj) {
         activity.setObject(obj);
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public void setUsername(String u) {

@@ -18,4 +18,5 @@ public class LockRequestMsg extends JsonMessage{
     }
 
     public void setOriginalServer(String o){originalServer = o;}
+
 }

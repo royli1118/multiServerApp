@@ -32,8 +32,11 @@ public class ServerControl extends Control {
     private ArrayList<Connection> serverConnectionList = new ArrayList<>();
     // a record for how many clients will connect to this server
     private ArrayList<Connection> clientConnectionList = new ArrayList<>();
+    // Only record the current Client to connect this server, after the lock_allowed and lock_denied, it will be removed.
+    private ArrayList<Connection> currentClientConnectionList;
     // a record for server info which have connect to this server
     private ArrayList<ServerSettings> serverInfoList = new ArrayList<>();
+
     // a record for client info which have connect to this server
     private HashMap<String, String> clientInfoList = new HashMap<>();
     // authenticate id between servers
@@ -44,18 +47,30 @@ public class ServerControl extends Control {
 
         // start a listener
         listener = ServerListener.getInstance();
-        id = Settings.nextSecret();
 
         /*
          * This part means if the server will not remote to any server
          * and this is the host server
          */
-        if (Settings.getRemoteHostname()!= null){
-            connectToServer();
+        if (Settings.getRemoteHostname() == null){
+            id = Settings.nextSecret();
+            Settings.setSecret(id);
+            log.info(id);
+            start();
+        }else{
+            id = Settings.getSecret();
+            if (id == null){
+                log.debug("The slave Server do not provide the secret to connect other server");
+                System.exit(-1);
+            }
+            else {
+                connectToServer();
+                start();
+            }
         }
         // start the server's activity loop
         // it will call doActivity every few seconds
-        start();
+
     }
 
     // since control and its subclasses are singleton, we get the singleton this
@@ -102,9 +117,9 @@ public class ServerControl extends Control {
         return con;
     }
 
-    /*
+    /**
      * the connection has been closed
-     * @param the connection to be closed
+     * @param con
      */
     @Override
     public void connectionClosed(Connection con) {
@@ -115,9 +130,9 @@ public class ServerControl extends Control {
         }
     }
 
-    /*
+    /**
      * the connection has been closed
-     * @param the connection to be closed
+     * @param port,host
      * @return true if connection succeeds, false otherwise
      */
     public boolean initiateConnection(int port, String host) {
@@ -352,7 +367,9 @@ public class ServerControl extends Control {
                 lockrequestMsg.setUsername(username);
                 lockrequestMsg.setSecret(secret);
                 // In this case, I insert a new variable into the lockrequest, which is original server.
-                lockrequestMsg.setOriginalServer(con.getSocket().getInetAddress().getHostAddress() + ":" + con.getSocket().getPort());
+                lockrequestMsg.setOriginalServer(con.getSocket().getInetAddress().getHostAddress() + ":" + Settings.getLocalPort());
+                currentClientConnectionList = new ArrayList<>();
+                currentClientConnectionList.add(con);
                 String lockrequestJsonStr = lockrequestMsg.toJsonString();
                 forwardToOtherServers(con, lockrequestJsonStr);
             } else {
@@ -391,20 +408,21 @@ public class ServerControl extends Control {
         // If the username not contain in the list
 
         if (!clientInfoList.containsKey(username)) {
+            LockAllowedMsg lockAllowedMsg = new LockAllowedMsg();
+            lockAllowedMsg.setSecret(secret);
+            lockAllowedMsg.setUsername(username);
+            String lockallowJsonStr = lockAllowedMsg.toJsonString();
+            forwardBackToOriginalServer(lockallowJsonStr, originalServer);
+
+        } else {
             LockDeniedMsg lockDeniedMsg = new LockDeniedMsg();
             lockDeniedMsg.setSecret(secret);
             lockDeniedMsg.setUsername(username);
             lockDeniedMsg.setOriginalServer(originalServer);
             String lockdeniedJsonStr = lockDeniedMsg.toJsonString();
-            forwardBackToOriginalServer(con, lockdeniedJsonStr, originalServer);
+            forwardBackToOriginalServer(lockdeniedJsonStr, originalServer);
 
-        } else {
-            LockAllowedMsg lockAllowedMsg = new LockAllowedMsg();
-            lockAllowedMsg.setSecret(secret);
-            lockAllowedMsg.setUsername(username);
 
-            String lockallowJsonStr = lockAllowedMsg.toJsonString();
-            forwardBackToOriginalServer(con, lockallowJsonStr, originalServer);
         }
 
         return false;
@@ -413,12 +431,11 @@ public class ServerControl extends Control {
     /**
      * Push the lock message back to Original Server
      *
-     * @param con
      * @param lockedMsgJsonStr
      * @param originalServer
      * @return
      */
-    private boolean forwardBackToOriginalServer(Connection con, String lockedMsgJsonStr, String originalServer) {
+    private boolean forwardBackToOriginalServer(String lockedMsgJsonStr, String originalServer) {
         String host = originalServer.substring(0, originalServer.indexOf(':'));
         int port = Integer.parseInt(originalServer.substring(originalServer.indexOf(':') + 1));
         try {
@@ -444,7 +461,7 @@ public class ServerControl extends Control {
 
         String secret = receivedJsonObj.get("secret").getAsString();
         String username = receivedJsonObj.get("username").getAsString();
-
+        Connection conn = currentClientConnectionList.get(0);
         log.info("Register_Success");
 
         // Send register success message
@@ -452,8 +469,8 @@ public class ServerControl extends Control {
         registerSuccMsg.setInfo("register success for " + username);
 
         String registSuccJsonStr = registerSuccMsg.toJsonString();
-        con.writeMsg(registSuccJsonStr);
-
+        conn.writeMsg(registSuccJsonStr);
+        currentClientConnectionList.remove(conn);
         // Add client info
         clientInfoList.put(username, secret);
 
@@ -474,9 +491,10 @@ public class ServerControl extends Control {
 
         RegisterFailedMsg registerFailedMsg = new RegisterFailedMsg();
         registerFailedMsg.setInfo(username + " is already registered in other distributed Servers");
-
+        Connection conn = currentClientConnectionList.get(0);
         String registFailedJsonStr = registerFailedMsg.toJsonString();
-        con.writeMsg(registFailedJsonStr);
+        conn.writeMsg(registFailedJsonStr);
+        currentClientConnectionList.remove(conn);
 
         return true;
     }
@@ -507,14 +525,14 @@ public class ServerControl extends Control {
         if (serverInfo == null) {
             serverInfo = new ServerSettings();
             serverInfo.setId(id);
-            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt());
+            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt() + 1);
             serverInfo.setRemoteHostname(receivedJsonObj.get("hostname").getAsString());
             serverInfo.setRemotePort(receivedJsonObj.get("port").getAsInt());
             serverInfoList.add(serverInfo);
         }
         // This is a known server, update server load info
         else {
-            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt());
+            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt() + 1);
         }
         return false;
     }
@@ -556,7 +574,7 @@ public class ServerControl extends Control {
             return true;
         }
 
-        // Check username and secret!!
+        // Check username and secret
         String username = receivedJsonObj.get("username").getAsString();
         String secret = receivedJsonObj.get("secret").getAsString();
 
@@ -575,12 +593,12 @@ public class ServerControl extends Control {
         log.debug("Broadcast activity message received from client");
 
         // Convert it to activity broadcast message
-        JsonObject jsonObj = receivedJsonObj.get("activity").getAsJsonObject();
-        String content = jsonObj.getAsString();
+//        JsonObject jsonObj = receivedJsonObj.get("activity").getAsJsonObject();
+//        String content = jsonObj.getAsString();
 
         ActBroadMsg actBroadMsg = new ActBroadMsg();
         actBroadMsg.setActor(username);
-        actBroadMsg.setObject(content);
+        actBroadMsg.setObject(receivedJsonObj.get("activity").getAsString());
 
         String activityJsonStr = actBroadMsg.toJsonString();
 

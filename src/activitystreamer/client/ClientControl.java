@@ -56,6 +56,8 @@ public class ClientControl extends Thread {
      * @param activityContent
      */
     public void sendTOServerJsonObject(String activityContent) {
+
+
         log.info("Client message sent: " + activityContent);
         connection.writeMsg(activityContent);
     }
@@ -71,7 +73,6 @@ public class ClientControl extends Thread {
         closeConnection();
         loginFrame.close();
         textFrame.dispose();
-        System.exit(-1);
     }
 
     /**
