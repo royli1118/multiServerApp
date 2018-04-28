@@ -421,8 +421,6 @@ public class ServerControl extends Control {
             lockDeniedMsg.setOriginalServer(originalServer);
             String lockdeniedJsonStr = lockDeniedMsg.toJsonString();
             forwardBackToOriginalServer(lockdeniedJsonStr, originalServer);
-
-
         }
 
         return false;
@@ -464,15 +462,28 @@ public class ServerControl extends Control {
         Connection conn = currentClientConnectionList.get(0);
         log.info("Register_Success");
 
-        // Send register success message
-        RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
-        registerSuccMsg.setInfo("register success for " + username);
+        String host = conn.getSocket().getInetAddress().toString();
 
-        String registSuccJsonStr = registerSuccMsg.toJsonString();
-        conn.writeMsg(registSuccJsonStr);
-        currentClientConnectionList.remove(conn);
-        // Add client info
-        clientInfoList.put(username, secret);
+        int port = conn.getSocket().getPort();
+        try {
+            Socket s = new Socket(host, port);
+            Connection conoriginal = new Connection(s);
+            // Send register success message
+            RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
+            registerSuccMsg.setInfo("register success for " + username);
+
+            String registSuccJsonStr = registerSuccMsg.toJsonString();
+            conoriginal.writeMsg(registSuccJsonStr);
+
+            currentClientConnectionList.remove(conn);
+
+            // Add client info
+            clientInfoList.put(username, secret);
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.info("Cannot connect to original Client");
+        }
+
 
         return false;
     }
@@ -488,15 +499,31 @@ public class ServerControl extends Control {
     private boolean processServerLockDeniedMsg(Connection con, JsonObject receivedJsonObj) {
 
         String username = receivedJsonObj.get("username").getAsString();
-
-        RegisterFailedMsg registerFailedMsg = new RegisterFailedMsg();
-        registerFailedMsg.setInfo(username + " is already registered in other distributed Servers");
         Connection conn = currentClientConnectionList.get(0);
-        String registFailedJsonStr = registerFailedMsg.toJsonString();
-        conn.writeMsg(registFailedJsonStr);
-        currentClientConnectionList.remove(conn);
+        String host = conn.getSocket().getInetAddress().toString();
 
-        return true;
+        int port = conn.getSocket().getPort();
+        try {
+            Socket s = new Socket(host, port);
+            Connection conoriginal = new Connection(s);
+            // Send register failed message
+            RegisterFailedMsg registerFailedMsg = new RegisterFailedMsg();
+            registerFailedMsg.setInfo(username + " is already registered in other distributed Servers");
+
+            String registFailedJsonStr = registerFailedMsg.toJsonString();
+            conoriginal.writeMsg(registFailedJsonStr);
+
+            currentClientConnectionList.remove(conn);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.info("Cannot connect to original Client");
+        }
+
+
+
+
+        return false;
     }
 
     /**
