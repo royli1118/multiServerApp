@@ -14,9 +14,9 @@ import java.net.UnknownHostException;
 
 
 /**
- * This class deals with main logic of servers' behavior. It is responsible for processing server'
- * request to login, logout, register message and so forth. It also handles servers'
- * request to authenticate, redirect, server announce and so forth.
+ * This class deals with main logic of clients' behavior. It is responsible for processing clients'
+ * request to login, logout, register message and so forth. It also handles servers' reply
+ * for redirect, broadcast and so forth.
  *
  * @author Zelei Cui and Huanan Li
  */
@@ -52,7 +52,7 @@ public class ClientControl extends Thread {
     }
 
     /**
-     * It is called by GUI SEND COMMAND to send any JSON message
+     * It is called by GUI send command to send any JSON message
      * @param activityContent
      */
     public void sendTOServerJsonObject(String activityContent) {
@@ -78,7 +78,7 @@ public class ClientControl extends Thread {
     /**
      * Process all incoming JSON String, and return the actions
      * @param receivedJsonStr
-     * @return
+     * @return boolean
      */
     public synchronized boolean process(String receivedJsonStr) {
         log.debug("Client received: " + receivedJsonStr);
@@ -149,8 +149,10 @@ public class ClientControl extends Thread {
         loginFrame = new LoginFrame();
     }
 
-    /*
+    /**
      * Process Login Fail using JSON message.
+     *  @param receivedJson
+     *  @return Boolean
      */
     private boolean processLoginFailedMsg(JsonObject receivedJson) {
         log.info("Login failed");
@@ -163,8 +165,9 @@ public class ClientControl extends Thread {
     }
 
 
-    /*
+    /**
      * Process Login Success using JSON message.
+     * @return Boolean
      */
     private boolean processLoginSuccessMsg() {
         log.info("Login success received");
@@ -182,9 +185,10 @@ public class ClientControl extends Thread {
     }
 
 
-    /*
+    /**
      * Process Register Success Message Using JSON
-     *
+     * @param receivedJsonObj
+     * @return Boolean
      */
     private boolean processRegisterSuccessMsg(JsonObject receivedJsonObj) {
         log.info("Register success received");
@@ -196,9 +200,10 @@ public class ClientControl extends Thread {
         return true;
     }
 
-    /*
+    /**
      * Process UnknownMessage, if the Message is Unknown, and disconnect
-     *
+     * @param receivedJsonObj
+     * @return Boolean
      */
     private boolean processUnknownMsg(JsonObject receivedJsonObj) {
         log.info("Unknown message received");
@@ -208,7 +213,8 @@ public class ClientControl extends Thread {
 
     /**
      * Process the Redirect Message function, and need to connect to another server
-     *
+     * @param receivedJsonObj
+     * @return Boolean
      */
     private boolean processRedirectMsg(JsonObject receivedJsonObj) {
         log.info("Redirect");
@@ -217,7 +223,7 @@ public class ClientControl extends Thread {
         closeConnection();
 
         // Setup with new host and port number
-//        serverId = receivedJsonObj.get("id").getAsString();
+        // serverId = receivedJsonObj.get("id").getAsString();
         String newHost = receivedJsonObj.get("hostname").getAsString();
         int newPort = receivedJsonObj.get("port").getAsInt();
 

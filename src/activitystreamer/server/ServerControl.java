@@ -32,7 +32,8 @@ public class ServerControl extends Control {
     private ArrayList<Connection> serverConnectionList = new ArrayList<>();
     // a record for how many clients will connect to this server
     private ArrayList<Connection> clientConnectionList = new ArrayList<>();
-    // Only record the current Client to connect this server, after the lock_allowed and lock_denied, it will be removed.
+    // Only record the current state of connections between clients and a server.
+    // E.g, After the lock_allowed and lock_denied, it will be removed.
     private ArrayList<Connection> currentClientConnectionList;
     // a record for server info which have connect to this server
     private ArrayList<ServerSettings> serverInfoList = new ArrayList<>();
@@ -52,18 +53,17 @@ public class ServerControl extends Control {
          * This part means if the server will not remote to any server
          * and this is the host server
          */
-        if (Settings.getRemoteHostname() == null){
+        if (Settings.getRemoteHostname() == null) {
             id = Settings.nextSecret();
             Settings.setSecret(id);
             log.info(id);
             start();
-        }else{
+        } else {
             id = Settings.getSecret();
-            if (id == null){
+            if (id == null) {
                 log.debug("The slave Server do not provide the secret to connect other server");
                 System.exit(-1);
-            }
-            else {
+            } else {
                 connectToServer();
                 start();
             }
@@ -82,10 +82,10 @@ public class ServerControl extends Control {
         return (ServerControl) control;
     }
 
-    /*
+    /**
      * a new incoming connection
-     * @param A Socket to establish a connection
-     * @return A ServerConnection object which requires connection
+     * @param s A Socket to establish a connection
+     * @return ServerConnection A ServerConnection object which requires connection
      */
     @Override
     public ServerConnection incomingConnection(Socket s) throws IOException {
@@ -96,10 +96,10 @@ public class ServerControl extends Control {
         return con;
     }
 
-    /*
+    /**
      * a new outgoing connection
-     * @param A Socket to establish a connection
-     * @return A ServerConnection object which requires connection
+     * @param s A Socket to establish a connection
+     * @return ServerConnection A ServerConnection object which requires connection
      */
     @Override
     public ServerConnection outgoingConnection(Socket s) throws IOException {
@@ -119,7 +119,8 @@ public class ServerControl extends Control {
 
     /**
      * the connection has been closed
-     * @param con
+     *
+     * @param con the current connection
      */
     @Override
     public void connectionClosed(Connection con) {
@@ -132,7 +133,8 @@ public class ServerControl extends Control {
 
     /**
      * the connection has been closed
-     * @param port,host
+     * @param port port number
+     * @param host host name
      * @return true if connection succeeds, false otherwise
      */
     public boolean initiateConnection(int port, String host) {
@@ -224,10 +226,10 @@ public class ServerControl extends Control {
     }
 
 
-    /*
+    /**
      * Called once every few seconds to synchronize servers' information
-     * @return true if server should shut down, false otherwise
      *
+     * @return boolean
      */
     @Override
     public boolean doActivity() {
@@ -248,9 +250,12 @@ public class ServerControl extends Control {
         return false;
     }
 
-    /*
-     * Other message processing methods, return true if the connection should be closed,
-     * false otherwise.
+    /**
+     * Other message processing methods
+     * @param con the current connection
+     * @param receivedJsonObj the Json object to be processed
+     * @return true if the connection should be closed, false otherwise.
+     *
      */
     private boolean processLogoutMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("user logout");
@@ -260,6 +265,14 @@ public class ServerControl extends Control {
         return true;
     }
 
+
+    /**
+     * Process the Authentication failed message, connected by server
+     *
+     * @param con the current connection
+     * @param receivedJsonObj the Json object to be processed
+     * @return true if the connection should be closed, false otherwise.
+     */
     private boolean processAuthFailedMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("Authentication failed");
 
@@ -268,11 +281,7 @@ public class ServerControl extends Control {
         return true;
     }
 
-    // process invalid message?????
-    // process invalid message?????
-    // process invalid message?????
-    // process invalid message?????
-    // process invalid message?????
+    // process invalid message
     private boolean processInvalidMsg(JsonObject receivedJsonObj) {
         String errorInfo = receivedJsonObj.get("info").getAsString();
 
@@ -283,6 +292,7 @@ public class ServerControl extends Control {
 
     }
 
+    // Process Login message
     private boolean processLoginMsg(Connection con, JsonObject receivedJsonObj) {
         // Validate login message format
         if (!isUserInfoMsgValid(con, receivedJsonObj)) {
@@ -322,11 +332,13 @@ public class ServerControl extends Control {
             LoginFailedMsg loginFailedMsg = new LoginFailedMsg();
             loginFailedMsg.setInfo("server is too busy");
 
-            //iterate serverinfo and find the lowest connection number
+            //iterate serverinfo and find the lowest connection load
             RedirectMsg redirectMsg = new RedirectMsg();
-            redirectMsg.setHost(serverInfoList.get(0).getRemoteHostname());
-            redirectMsg.setPort(serverInfoList.get(0).getRemotePort());
-            redirectMsg.setId(serverInfoList.get(0).getId());
+            // Find the server with the lowest load
+            ServerSettings server = minLoadServer();
+            redirectMsg.setHost(server.getRemoteHostname());
+            redirectMsg.setPort(server.getRemotePort());
+            redirectMsg.setId(server.getId());
 
             String redirectMsgJsonStr = redirectMsg.toJsonString();
             con.writeMsg(redirectMsgJsonStr);
@@ -336,6 +348,7 @@ public class ServerControl extends Control {
         return true;
     }
 
+    // Process Register message
     private boolean processRegisterMsg(Connection con, JsonObject receivedJsonObj) {
         // Validate register message format
         if (!isUserInfoMsgValid(con, receivedJsonObj)) {
@@ -392,20 +405,15 @@ public class ServerControl extends Control {
         }
     }
 
-    /**
-     * Process server lock request Message
-     *
-     * @param con
-     * @param receivedJsonObj
-     * @return
-     */
+
+    // Process server lock request Message
     private boolean processServerLockRequestMsg(Connection con, JsonObject receivedJsonObj) {
         log.info("Lock Request received");
 
         String secret = receivedJsonObj.get("secret").getAsString();
         String username = receivedJsonObj.get("username").getAsString();
         String originalServer = receivedJsonObj.get("originalServer").getAsString();
-        // If the username not contain in the list
+        // If the username is not contained in the list
 
         if (!clientInfoList.containsKey(username)) {
             LockAllowedMsg lockAllowedMsg = new LockAllowedMsg();
@@ -426,13 +434,7 @@ public class ServerControl extends Control {
         return false;
     }
 
-    /**
-     * Push the lock message back to Original Server
-     *
-     * @param lockedMsgJsonStr
-     * @param originalServer
-     * @return
-     */
+    // Push the lock message back to Original Server
     private boolean forwardBackToOriginalServer(String lockedMsgJsonStr, String originalServer) {
         String host = originalServer.substring(0, originalServer.indexOf(':'));
         int port = Integer.parseInt(originalServer.substring(originalServer.indexOf(':') + 1));
@@ -449,7 +451,7 @@ public class ServerControl extends Control {
     }
 
     /**
-     * Process Server will received the locked Allowed process
+     * Process the Server received locked Allowed message
      *
      * @param con
      * @param receivedJsonObj
@@ -490,7 +492,7 @@ public class ServerControl extends Control {
 
 
     /**
-     * Process Server will received the locked Allowed process
+     * Process the Server received locked denied message
      *
      * @param con
      * @param receivedJsonObj
@@ -521,13 +523,11 @@ public class ServerControl extends Control {
         }
 
 
-
-
         return false;
     }
 
     /**
-     * Processing Server Announce Message
+     * Process Server Announce Message
      *
      * @param con
      * @param receivedJsonObj
@@ -565,7 +565,8 @@ public class ServerControl extends Control {
     }
 
     /**
-     * Process activity broadcast from other server
+     * Process activity broadcast from other servers
+     *
      * @param con
      * @param receivedJsonObj
      * @return boolean
@@ -589,6 +590,7 @@ public class ServerControl extends Control {
 
     /**
      * Process activity message from client
+     *
      * @param con
      * @param receivedJsonObj
      * @return boolean
@@ -618,10 +620,9 @@ public class ServerControl extends Control {
         }
 
         log.debug("Broadcast activity message received from client");
-
         // Convert it to activity broadcast message
-//        JsonObject jsonObj = receivedJsonObj.get("activity").getAsJsonObject();
-//        String content = jsonObj.getAsString();
+        // JsonObject jsonObj = receivedJsonObj.get("activity").getAsJsonObject();
+        // String content = jsonObj.getAsString();
 
         ActBroadMsg actBroadMsg = new ActBroadMsg();
         actBroadMsg.setActor(username);
@@ -635,6 +636,7 @@ public class ServerControl extends Control {
         return false;
     }
 
+    // Process authenticate message
     private boolean processAuthMsg(Connection con, JsonObject receivedJsonObj) {
         // This server has too many children
         if (serverConnectionList.size() >= SERVER_CONNECTION_UPPER_LIMIT) {
@@ -689,7 +691,8 @@ public class ServerControl extends Control {
     }
 
     /**
-     * For broadcasting to all servers
+     * Broadcast to all servers
+     *
      * @param jsonStr
      */
     private void broadcastToAllOtherServers(String jsonStr) {
@@ -700,6 +703,7 @@ public class ServerControl extends Control {
 
     /**
      * Forward to the other servers
+     *
      * @param current
      * @param jsonStr
      */
@@ -712,7 +716,8 @@ public class ServerControl extends Control {
     }
 
     /**
-     * For broadcasting to All Clients which adjacent to the server
+     * Broadcast to all clients which is adjacent to the server
+     *
      * @param jsonStr
      */
     private void broadcastToAllClients(String jsonStr) {
@@ -723,15 +728,16 @@ public class ServerControl extends Control {
 
 
     /**
-     * For broadcasting intitialize the connection
+     *  Initialize the broadcasting connection
+     *
      * @return boolean
      */
     public boolean connectToServer() {
-		return initiateConnection(Settings.getRemotePort(), Settings.getRemoteHostname());
-	}
+        return initiateConnection(Settings.getRemotePort(), Settings.getRemoteHostname());
+    }
 
     /**
-     *
+     * If the object contains command field
      * @param con
      * @param receivedJsonObj
      * @return boolean
@@ -803,7 +809,8 @@ public class ServerControl extends Control {
 
 
     /**
-     * Check if the server is Authentiated
+     * Check if the server is authenticated
+     *
      * @param con
      * @return boolean
      */
@@ -833,5 +840,23 @@ public class ServerControl extends Control {
 
     private boolean hasClientInfo(String username, String secret) {
         return clientInfoList.containsKey(username) && clientInfoList.get(username).equals(secret);
+    }
+
+    /**
+     * Find the minLoad Server
+     *
+     * @return ServerSettings the minimum load server
+     */
+    private ServerSettings minLoadServer() {
+        int minLoad = serverInfoList.get(0).getServerLoad();
+        int index = 0;
+        for (int i = 1; i < serverInfoList.size(); i++) {
+            int load = serverInfoList.get(i).getServerLoad();
+            if (load < minLoad) {
+                minLoad = load;
+                index = i;
+            }
+        }
+        return serverInfoList.get(index);
     }
 }
