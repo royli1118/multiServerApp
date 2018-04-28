@@ -388,7 +388,7 @@ public class ServerControl extends Control {
             }
 
 
-            return true;
+            return false;
         }
     }
 
@@ -462,7 +462,7 @@ public class ServerControl extends Control {
         Connection conn = currentClientConnectionList.get(0);
         log.info("Register_Success");
 
-        String host = conn.getSocket().getInetAddress().toString();
+        String host = conn.getSocket().getInetAddress().getHostAddress();
 
         int port = conn.getSocket().getPort();
         try {
@@ -500,7 +500,7 @@ public class ServerControl extends Control {
 
         String username = receivedJsonObj.get("username").getAsString();
         Connection conn = currentClientConnectionList.get(0);
-        String host = conn.getSocket().getInetAddress().toString();
+        String host = conn.getSocket().getInetAddress().getHostAddress();
 
         int port = conn.getSocket().getPort();
         try {
