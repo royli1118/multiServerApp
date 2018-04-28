@@ -21,16 +21,20 @@ import java.util.HashMap;
  * request to login, logout, register, broadcast message and so forth. It also handles servers'
  * request to authenticate, redirect, server announce and so forth.
  *
- * @author Zelei Cui
+ * @author Zelei Cui and Huanan Li
  */
 
 public class ServerControl extends Control {
     private static final Logger log = LogManager.getLogger();
     private static final int SERVER_CONNECTION_UPPER_LIMIT = 5;
     private static final int CLIENT_CONNECTION_UPPER_LIMIT = 4;
+    // a record for how many servers will connect to this server
     private ArrayList<Connection> serverConnectionList = new ArrayList<>();
+    // a record for how many clients will connect to this server
     private ArrayList<Connection> clientConnectionList = new ArrayList<>();
+    // a record for server info which have connect to this server
     private ArrayList<ServerSettings> serverInfoList = new ArrayList<>();
+    // a record for client info which have connect to this server
     private HashMap<String, String> clientInfoList = new HashMap<>();
     // authenticate id between servers
     private String id;
@@ -43,10 +47,12 @@ public class ServerControl extends Control {
         id = Settings.nextSecret();
 
         /*
-         * Do some further initialization here if necessary
+         * This part means if the server will not remote to any server
+         * and this is the host server
          */
-        connectToServer();
-
+        if (Settings.getRemoteHostname()!= null){
+            connectToServer();
+        }
         // start the server's activity loop
         // it will call doActivity every few seconds
         start();
@@ -83,9 +89,10 @@ public class ServerControl extends Control {
     @Override
     public ServerConnection outgoingConnection(Socket s) throws IOException {
         ServerConnection con = new ServerConnection(s);
-
         // Send authentication message
         AuthMsg authJson = new AuthMsg();
+        // This step the connect server must have the same secret provided by the host server
+        // Otherwise this part will not work
         authJson.setSecret(Settings.getSecret());
 
         String authJsonStr = authJson.toJsonString();
@@ -675,7 +682,7 @@ public class ServerControl extends Control {
      * @return boolean
      */
     public boolean connectToServer() {
-		return initiateConnection(Settings.getLoadBalancerPort(), Settings.getLoadBalancerHostname());
+		return initiateConnection(Settings.getRemotePort(), Settings.getRemoteHostname());
 	}
 
     /**

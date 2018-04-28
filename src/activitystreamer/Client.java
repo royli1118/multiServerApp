@@ -6,6 +6,14 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * Client Main Class for running the program
+ *
+ * @author Dr. Aaron Harwood
+ * @editor edited by Huanan Li
+ * @version 1.1
+ */
+
 public class Client {
     private static final Logger log = LogManager.getLogger();
 
@@ -62,9 +70,6 @@ public class Client {
 
         log.info("starting client");
 
-        /*
-         * maybe change the line below to suit your program
-         */
         ClientControl.getInstance();
     }
 }

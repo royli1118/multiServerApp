@@ -8,7 +8,12 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-
+/**
+ * This class is a utility class which implement the connections from servers or clients
+ *
+ * @author Huanan Li
+ *
+ */
 public class Control extends Thread {
     protected static final Logger log = LogManager.getLogger();
     protected static Control control;

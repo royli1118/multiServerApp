@@ -10,6 +10,14 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 
+/**
+ * Server Main Class for running the program
+ *
+ * @author Dr. Aaron Harwood
+ * @editor edited by Huanan Li
+ * @version 1.1
+ */
+
 public class Server {
 
     private static final Logger log = LogManager.getLogger();

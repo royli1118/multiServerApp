@@ -1,6 +1,10 @@
 package activitystreamer.server;
 
-
+/**
+ * Settings for Server Command Line options from Skeleton Code
+ *
+ * @author Dr. Aaron Harwood
+ */
 public class ServerSettings {
     private String id = null;
     private String remoteHostname = null;

@@ -13,6 +13,14 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 
+/**
+ * This class deals with main logic of servers' behavior. It is responsible for processing server'
+ * request to login, logout, register message and so forth. It also handles servers'
+ * request to authenticate, redirect, server announce and so forth.
+ *
+ * @author Zelei Cui and Huanan Li
+ */
+
 public class ClientControl extends Thread {
     private static final Logger log = LogManager.getLogger();
     private static ClientControl clientControl;
@@ -237,7 +245,7 @@ public class ClientControl extends Thread {
 
 //        String info = receivedJsonObj.get("info").getAsString();
         textFrame.sendOutPutText(receivedJsonObj);
-//        disconnect();
+        disconnect();
 
         return true;
     }
@@ -384,7 +392,7 @@ public class ClientControl extends Thread {
     }
 
     /**
-     * The function for sending Client Authentication Message
+     * The function for sending logout Message to server
      *
      */
     public void sendLogout() {

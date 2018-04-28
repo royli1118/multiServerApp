@@ -6,7 +6,12 @@ import activitystreamer.util.Settings;
 import java.io.IOException;
 import java.net.Socket;
 
-
+/**
+ * This class implements the connection from or to a server.
+ *
+ * @author Huanan Li
+ *
+ */
 public class ClientConnection extends Connection {
 
     public ClientConnection(Socket socket) throws IOException {

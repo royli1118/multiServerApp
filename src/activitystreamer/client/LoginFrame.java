@@ -13,7 +13,10 @@ import java.util.HashMap;
 /**
  * The login frame for Client User implemented by JAVA GUI
  *
- * Added by Huanan Li
+ * The login frame is an alternative for settings on the Command Line Options,
+ * for user friendly
+ *
+ * @author Huanan Li
  */
 public class LoginFrame implements ActionListener {
     private JFrame frame;
@@ -152,6 +155,7 @@ public class LoginFrame implements ActionListener {
                 Settings.setRemotePort(Integer.parseInt(hostportText.getText()));
                 Settings.setRemoteHostname(hostnameText.getText());
             } else {
+                // If user have not set any remote host and remote name, the default is local server.
                 Settings.setRemotePort(3780);
                 Settings.setRemoteHostname("127.0.0.1");
             }

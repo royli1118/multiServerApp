@@ -7,19 +7,22 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.security.SecureRandom;
 
+
+/**
+ * Settings for Command Line options from Skeleton Code
+ *
+ * @author Dr. Aaron Harwood
+ */
 public class Settings {
     private static final Logger log = LogManager.getLogger();
     private static SecureRandom random = new SecureRandom();
     private static int localPort = 3780;
     private static String localHostname = "localhost";
     private static String remoteHostname = null;
-    private static String loadBalancerHostname = "localhost";
     private static int remotePort = 3780;
     private static int activityInterval = 5000; // milliseconds
     private static String secret = null;
     private static String username = "anonymous";
-
-    private static int loadbalancerPort = -1;
 
     public static int getLocalPort() {
         return localPort;
@@ -42,26 +45,6 @@ public class Settings {
             log.error("supplied port " + remotePort + " is out of range, using " + getRemotePort());
         } else {
             Settings.remotePort = remotePort;
-        }
-    }
-
-    public static String getLoadBalancerHostname() {
-        return loadBalancerHostname;
-    }
-
-    public static void setLoadBalancerHostname(String lbn) {
-        Settings.loadBalancerHostname = lbn;
-    }
-
-    public static int getLoadBalancerPort() {
-        return loadbalancerPort;
-    }
-
-    public static void setLoadBalancerPort(int lbp) {
-        if (remotePort < 0 || remotePort > 65535) {
-            log.error("supplied port " + remotePort + " is out of range, using " + getRemotePort());
-        } else {
-            loadbalancerPort = lbp;
         }
     }
 
@@ -113,6 +96,11 @@ public class Settings {
         return socket.getInetAddress() + ":" + socket.getPort();
     }
 
+    /**
+     * Secret Generater
+     *
+     * @return BigInt
+     */
     public static String nextSecret() {
         return new BigInteger(130, random).toString(32);
     }

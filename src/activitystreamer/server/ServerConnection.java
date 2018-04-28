@@ -7,6 +7,14 @@ import java.io.IOException;
 import java.net.Socket;
 
 
+
+
+/**
+ * This class implements the connection from or to a Client.
+ *
+ * @author Zelei Cui
+ *
+ */
 public class ServerConnection extends Connection {
 
     public ServerConnection(Socket socket) throws IOException {

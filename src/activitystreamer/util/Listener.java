@@ -6,7 +6,12 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-
+/**
+ * Listener main function from Skeleton Code
+ *
+ * @author Dr. Aaron Harwood
+ *
+ */
 public class Listener extends Thread {
     protected static final Logger log = LogManager.getLogger();
     protected static Listener listener;
