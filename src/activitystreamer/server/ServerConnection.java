@@ -31,14 +31,14 @@ public class ServerConnection extends Connection {
                 term = ServerControl.getInstance().process(this, data);
             }
 
-            log.debug("connection closed to " + Settings.socketAddress(socket));
+//            log.debug("connection closed to " + Settings.socketAddress(socket));
         } catch (IOException e) {
             log.error("connection " + Settings.socketAddress(socket) + " closed with exception: " + e);
 
             ServerControl.getInstance().connectionClosed(this);
         }
 
-        ServerControl.getInstance().connectionClosed(this);
-        closeStream();
+//        ServerControl.getInstance().connectionClosed(this);
+//        closeStream();
     }
 }

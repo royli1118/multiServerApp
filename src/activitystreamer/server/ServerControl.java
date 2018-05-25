@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
 /**
@@ -26,8 +27,8 @@ import java.util.HashMap;
 
 public class ServerControl extends Control {
     private static final Logger log = LogManager.getLogger();
-    private static final int SERVER_CONNECTION_UPPER_LIMIT = 5;
-    private static final int CLIENT_CONNECTION_UPPER_LIMIT = 4;
+    private static final int SERVER_CONNECTION_UPPER_LIMIT = 3;
+    private static final int CLIENT_CONNECTION_UPPER_LIMIT = 2;
     // a record for how many servers will connect to this server
     private ArrayList<Connection> serverConnectionList = new ArrayList<>();
     // a record for how many clients will connect to this server
@@ -35,11 +36,19 @@ public class ServerControl extends Control {
     // Only record the current state of connections between clients and a server.
     // E.g, After the lock_allowed and lock_denied, it will be removed.
     private ArrayList<Connection> currentClientConnectionList;
+
+
+
+    // The entire JSON message have stored
+    private HashMap<String,JsonObject> allActivityMessage = new HashMap<>();
+
+
+
     // a record for server info which have connect to this server
     private ArrayList<ServerSettings> serverInfoList = new ArrayList<>();
 
     // a record for client info which have connect to this server
-    private HashMap<String, String> clientInfoList = new HashMap<>();
+    private HashMap<String, String> userInfoList = new HashMap<>();
     // authenticate id between servers
     private String id;
 
@@ -323,6 +332,8 @@ public class ServerControl extends Control {
 
             String loginSuccJsonStr = loginSuccMsg.toJsonString();
             con.writeMsg(loginSuccJsonStr);
+
+            clientConnectionList.add(con);
         }
         // This server is too busy
         else {
@@ -359,7 +370,7 @@ public class ServerControl extends Control {
         String username = receivedJsonObj.get("username").getAsString();
 
         // Check whether username already exists, and username cannot be 'anonymous'
-        if (clientInfoList.containsKey(username) || username.equals(JsonMessage.ANONYMOUS_USERNAME)) {
+        if (userInfoList.containsKey(username) || username.equals(JsonMessage.ANONYMOUS_USERNAME)) {
             log.info("Register failed. Username already exists!");
 
             RegisterFailedMsg registerFailedMsg = new RegisterFailedMsg();
@@ -384,7 +395,21 @@ public class ServerControl extends Control {
                 currentClientConnectionList = new ArrayList<>();
                 currentClientConnectionList.add(con);
                 String lockrequestJsonStr = lockrequestMsg.toJsonString();
-                forwardToOtherServers(con, lockrequestJsonStr);
+                String flags = forwardToOtherServers(con, lockrequestJsonStr);
+                if(flags.equals("LOCK_ALLOWED")){
+                    RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
+                    registerSuccMsg.setInfo("register success for " + username);
+
+                    String registSuccJsonStr = registerSuccMsg.toJsonString();
+                    con.writeMsg(registSuccJsonStr);
+                }else{
+                    RegisterFailedMsg registerFailedMsg = new RegisterFailedMsg();
+                    registerFailedMsg.setInfo(username + " is already registered in the system");
+
+                    String registFailedJsonStr = registerFailedMsg.toJsonString();
+                    con.writeMsg(registFailedJsonStr);
+                }
+
             } else {
                 // If only in one server
                 log.info("Register_Success");
@@ -397,7 +422,7 @@ public class ServerControl extends Control {
                 con.writeMsg(registSuccJsonStr);
 
                 // Add client info
-                clientInfoList.put(username, secret);
+                userInfoList.put(username, secret);
             }
 
 
@@ -415,7 +440,7 @@ public class ServerControl extends Control {
         String originalServer = receivedJsonObj.get("originalServer").getAsString();
         // If the username is not contained in the list
 
-        if (!clientInfoList.containsKey(username)) {
+        if (!userInfoList.containsKey(username)) {
             LockAllowedMsg lockAllowedMsg = new LockAllowedMsg();
             lockAllowedMsg.setSecret(secret);
             lockAllowedMsg.setUsername(username);
@@ -461,32 +486,8 @@ public class ServerControl extends Control {
 
         String secret = receivedJsonObj.get("secret").getAsString();
         String username = receivedJsonObj.get("username").getAsString();
-        Connection conn = currentClientConnectionList.get(0);
         log.info("Register_Success");
-
-        String host = conn.getSocket().getInetAddress().getHostAddress();
-
-        int port = conn.getSocket().getPort();
-        try {
-            Socket s = new Socket(host, port);
-            Connection conoriginal = new Connection(s);
-            // Send register success message
-            RegistSuccMsg registerSuccMsg = new RegistSuccMsg();
-            registerSuccMsg.setInfo("register success for " + username);
-
-            String registSuccJsonStr = registerSuccMsg.toJsonString();
-            conoriginal.writeMsg(registSuccJsonStr);
-
-            currentClientConnectionList.remove(conn);
-
-            // Add client info
-            clientInfoList.put(username, secret);
-        } catch (IOException e) {
-            e.printStackTrace();
-            log.info("Cannot connect to original Client");
-        }
-
-
+        userInfoList.put(username, secret);
         return false;
     }
 
@@ -621,14 +622,17 @@ public class ServerControl extends Control {
 
         log.debug("Broadcast activity message received from client");
         // Convert it to activity broadcast message
-        // JsonObject jsonObj = receivedJsonObj.get("activity").getAsJsonObject();
-        // String content = jsonObj.getAsString();
+        JsonObject actJsonObj = receivedJsonObj.get("activity").getAsJsonObject();
+        String content = actJsonObj.get("object").getAsString();
 
         ActBroadMsg actBroadMsg = new ActBroadMsg();
         actBroadMsg.setActor(username);
-        actBroadMsg.setObject(receivedJsonObj.get("activity").getAsString());
+        actBroadMsg.setObject(content);
 
         String activityJsonStr = actBroadMsg.toJsonString();
+
+        // Store the Activity message to the hashMap, save its username and activityMessage
+        allActivityMessage.put(username,actJsonObj);
 
         broadcastToAllClients(activityJsonStr);
         broadcastToAllOtherServers(activityJsonStr);
@@ -707,12 +711,14 @@ public class ServerControl extends Control {
      * @param current
      * @param jsonStr
      */
-    private void forwardToOtherServers(Connection current, String jsonStr) {
+    private String forwardToOtherServers(Connection current, String jsonStr) {
+        String result = "";
         for (Connection con : serverConnectionList) {
             if (current.getSocket().getPort() != con.getSocket().getPort()) {
                 con.writeMsg(jsonStr);
             }
         }
+        return result;
     }
 
     /**
@@ -839,7 +845,7 @@ public class ServerControl extends Control {
     }
 
     private boolean hasClientInfo(String username, String secret) {
-        return clientInfoList.containsKey(username) && clientInfoList.get(username).equals(secret);
+        return userInfoList.containsKey(username) && userInfoList.get(username).equals(secret);
     }
 
     /**

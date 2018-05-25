@@ -95,7 +95,7 @@ public class TextFrame extends JFrame implements ActionListener {
             String msg = inputText.getText().trim().replaceAll("\r", "").replaceAll("\n", "").replaceAll("\t", "");
             if (!msg.isEmpty()) {
                 if (clientThread.connect()) {
-                    clientThread.sendTOServerJsonObject(msg);
+                    clientThread.sendActivityObject(msg);
                 }
 
             } else {

@@ -35,6 +35,7 @@ public class Client {
         options.addOption("rp", true, "remote port number");
         options.addOption("rh", true, "remote hostname");
         options.addOption("s", true, "secret for username");
+        options.addOption("lp", true,"");
 
         // build a parser
         CommandLineParser parser = new DefaultParser();
@@ -66,6 +67,9 @@ public class Client {
 
         if (cmd.hasOption("u")) {
             Settings.setUsername(cmd.getOptionValue("u"));
+        }
+        if (cmd.hasOption("lp")){
+            Settings.setLocalPort(8080);
         }
 
         log.info("starting client");
