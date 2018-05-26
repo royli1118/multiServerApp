@@ -26,8 +26,8 @@ import java.util.*;
 
 public class ServerControl extends Control {
     private static final Logger log = LogManager.getLogger();
-    private static final int SERVER_CONNECTION_UPPER_LIMIT = 3;
-    private static final int CLIENT_CONNECTION_UPPER_LIMIT = 2;
+    private static final int SERVER_CONNECTION_UPPER_LIMIT = 50;
+    private static final int CLIENT_CONNECTION_UPPER_LIMIT = 3;
     // a record for how many servers will connect to this server
     private ArrayList<Connection> serverConnectionList = new ArrayList<>();
     // a record for how many clients will connect to this server
@@ -431,82 +431,24 @@ public class ServerControl extends Control {
         }
 
         String id = receivedJsonObj.get("id").getAsString();
-        ServerSettings serverInfo = findServer(id);
+        String rp = receivedJsonObj.get("hostname").getAsString();
+        int port = receivedJsonObj.get("port").getAsInt();
+        ServerSettings serverInfo = findServer(id,rp,port);
 
         // This is a new server
         if (serverInfo == null) {
             serverInfo = new ServerSettings();
             serverInfo.setId(id);
-            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt() + 1);
+            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt());
             serverInfo.setRemoteHostname(receivedJsonObj.get("hostname").getAsString());
             serverInfo.setRemotePort(receivedJsonObj.get("port").getAsInt());
-            Gson gson = new Gson();
-
-
-            // Syncronize the Userlist modified for Project 2
-            String userResult = receivedJsonObj.get("userList").toString();
-            if (!userResult.equals("")) {
-                HashMap<String, String> x = gson.fromJson(userResult, HashMap.class);
-                Iterator iterator = x.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry pair = (Map.Entry) iterator.next();
-                    if (!userInfoList.containsKey(pair.getKey())) {
-                        userInfoList.put(pair.getKey().toString(), pair.getValue().toString());
-                    }
-                }
-            }
-
-            // Syncronize the activity message modified for Project 2
-            String activityMessageResult = receivedJsonObj.get("allJSONMessage").toString();
-            if (!activityMessageResult.equals("")) {
-                HashMap<String, String> x = gson.fromJson(activityMessageResult, HashMap.class);
-                Iterator iterator = x.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry pair = (Map.Entry) iterator.next();
-                    if (!allActivityMessage.containsKey(pair.getKey())) {
-                        allActivityMessage.put(pair.getKey().toString(), pair.getValue().toString());
-                    }
-                }
-            }
-
+            synchronizePool(receivedJsonObj);
             serverInfoList.add(serverInfo);
         }
         // This is a known server, update server load info
         else {
-
-
-            Gson gson = new Gson();
-
-
-            // Syncronize the Userlist modified for Project 2
-            String userResult = receivedJsonObj.get("userList").toString();
-            if (!userResult.equals("")) {
-                HashMap<String, String> x = gson.fromJson(userResult, HashMap.class);
-                Iterator iterator = x.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry pair = (Map.Entry) iterator.next();
-                    if (!userInfoList.containsKey(pair.getKey())) {
-                        userInfoList.put(pair.getKey().toString(), pair.getValue().toString());
-                    }
-                }
-            }
-
-
-            // Syncronize the activity message modified for Project 2
-            String activityMessageResult = receivedJsonObj.get("allJSONMessage").toString();
-            if (!activityMessageResult.equals("")) {
-                HashMap<String, String> x = gson.fromJson(activityMessageResult, HashMap.class);
-                Iterator iterator = x.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry pair = (Map.Entry) iterator.next();
-                    if (!allActivityMessage.containsKey(pair.getKey())) {
-                        allActivityMessage.put(pair.getKey().toString(), pair.getValue().toString());
-                    }
-                }
-            }
-
-
-            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt() + 1);
+            synchronizePool(receivedJsonObj);
+            serverInfo.setServerLoad(receivedJsonObj.get("load").getAsInt());
         }
         return false;
     }
@@ -823,9 +765,9 @@ public class ServerControl extends Control {
         return false;
     }
 
-    private ServerSettings findServer(String id) {
+    private ServerSettings findServer(String id,String rp,int port) {
         for (ServerSettings serverInfo : serverInfoList) {
-            if (serverInfo.getId().equals(id)) {
+            if (serverInfo.getId().equals(id)&&serverInfo.getRemoteHostname().equals(rp)&&serverInfo.getRemotePort()==port) {
                 return serverInfo;
             }
         }
@@ -854,4 +796,39 @@ public class ServerControl extends Control {
         }
         return serverInfoList.get(index);
     }
+
+
+    private void synchronizePool(JsonObject receivedJsonObj) {
+
+        Gson gson = new Gson();
+
+        // Synchronize the User list. modified for Project 2
+        String userResult = receivedJsonObj.get("userList").toString();
+        if (!userResult.equals("")) {
+            HashMap<String, String> x = gson.fromJson(userResult, HashMap.class);
+            Iterator<Map.Entry<String, String>> iterator = x.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, String> pair = (Map.Entry<String, String>) iterator.next();
+                if (!userInfoList.containsKey(pair.getKey())) {
+                    userInfoList.put(pair.getKey().toString(), pair.getValue().toString());
+                }
+            }
+        }
+
+        // Synchronize the activity message. modified for Project 2
+        String activityMessageResult = receivedJsonObj.get("allJSONMessage").toString();
+        if (!activityMessageResult.equals("")) {
+            HashMap<String, String> x = gson.fromJson(activityMessageResult, HashMap.class);
+            Iterator<Map.Entry<String, String>> iterator = x.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, String> pair = (Map.Entry<String, String>) iterator.next();
+                if (!allActivityMessage.containsKey(pair.getKey())) {
+                    allActivityMessage.put(pair.getKey().toString(), pair.getValue().toString());
+                }
+            }
+        }
+    }
+
+
+
 }

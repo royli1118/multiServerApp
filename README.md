@@ -1,6 +1,6 @@
 # COMP90015 Assignment 2 High Availability and Eventual Consistency
 
-The lock_request,lock_allowed and lock_denied function has been abondoned.
+The lock_request,lock_allowed and lock_denied function are abondoned.
 
 
 1. Two JAR files included:
@@ -15,13 +15,22 @@ The lock_request,lock_allowed and lock_denied function has been abondoned.
 	java -cp server.jar activitystreamer.Server
 
 
-	When the 
-    if the Server is of Master type, option fields are left empty when
+	Two senarios for server:
+	 
+    1. Master type, option fields are left empty when
     typing the command.
-	
-    if the Server is of Slave type, the command line must contain -rh 
+	If you would like to define the local port:
+    	 (default is 3780)
+    
+    (E.g.) java -cp server.jar activitystreamer.Server -lp 3780_
+    
+    
+    2. Slave type, the command line must contain -rh 
     and -rp and -s options to connect to the Master Server. Otherwise
     this server will be regarded as a Master Server.
+    
+    (E.g.) java -cp server.jar activitystreamer.Server -lp 3780 -rp 3780 -rh 127.0.0.1 -s groupdurian
+     This time we set a default secret :-). 
 
 3. For the client, our group set up a Login GUI to perform login, 
    register and anonymous login function.
