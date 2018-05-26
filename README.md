@@ -1,5 +1,7 @@
 # COMP90015 Assignment 2 High Availability and Eventual Consistency
 
+The lock_request,lock_allowed and lock_denied function has been abondoned.
+
 
 1. Two JAR files included:
 	client.jar
@@ -12,6 +14,8 @@
     Server:
 	java -cp server.jar activitystreamer.Server
 
+
+	When the 
     if the Server is of Master type, option fields are left empty when
     typing the command.
 	
