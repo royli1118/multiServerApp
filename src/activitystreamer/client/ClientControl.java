@@ -113,6 +113,13 @@ public class ClientControl extends Thread {
 
                 return false;
 
+
+            case JsonMessage.REQUEST_ALL:
+                log.info("Receive previous message");
+
+                textFrame.sendOutPutText(receivedJson);
+
+                return false;
             case JsonMessage.REGISTER_SUCCESS:
                 return processRegisterSuccessMsg(receivedJson);
 
@@ -185,6 +192,15 @@ public class ClientControl extends Thread {
 
         if (textFrame == null) {
             textFrame = new TextFrame();
+
+            // When the User reconnect the System, the Client will request all activity messages from the server.
+            // Added for Project 2
+            RequestAllActivityMsg requestAllActivityMessage = new RequestAllActivityMsg();
+            requestAllActivityMessage.setUsername(Settings.getUsername());
+            requestAllActivityMessage.setSecret(Settings.getSecret());
+            String requestAllMessage = requestAllActivityMessage.toJsonString();
+            connection.writeMsg(requestAllMessage);
+
         }
 
         return false;

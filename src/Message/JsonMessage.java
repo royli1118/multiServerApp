@@ -30,6 +30,8 @@ public class JsonMessage {
     public final static String LOCK_REQUEST = "LOCK_REQUEST";
     public final static String LOCK_DENIED = "LOCK_DENIED";
     public final static String LOCK_ALLOWED = "LOCK_ALLOWED";
+    public final static String REQUEST_ALL = "REQUEST_ALL";
+    public final static String REQUEST_ALL_BACK = "REQUEST_ALL_BACK";
 
     private String command = "";
 

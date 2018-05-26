@@ -95,13 +95,4 @@ public class Settings {
     public static String socketAddress(Socket socket) {
         return socket.getInetAddress() + ":" + socket.getPort();
     }
-
-    /**
-     * Secret Generater
-     *
-     * @return BigInt
-     */
-    public static String nextSecret() {
-        return new BigInteger(130, random).toString(32);
-    }
 }
