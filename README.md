@@ -1,3 +1,6 @@
+# COMP90015 Assignment 2 High Availability and Eventual Consistency
+
+
 1. Two JAR files included:
 	client.jar
 	server.jar
