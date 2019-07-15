@@ -1,6 +1,6 @@
 # COMP90015 Assignment 2 High Availability and Eventual Consistency
 
-The lock_request,lock_allowed and lock_denied function are abondoned.
+The lock_request,lock_allowed and lock_denied function are abandoned.
 
 
 1. Two JAR files included:
